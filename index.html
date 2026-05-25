@@ -16,7 +16,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--cream);colo
 .hdr-brand{font-family:Georgia,serif;font-size:18px;font-weight:600;color:var(--ink);line-height:1}
 .hdr-sub{font-size:10px;color:var(--inkl);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
 nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--wh);border-top:1px solid var(--bdr);display:flex;z-index:20;box-shadow:0 -2px 10px rgba(44,51,37,.06)}
-.nb{flex:1;padding:9px 0 7px;background:none;border:none;cursor:pointer;color:var(--inkl);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;font-family:inherit;position:relative;transition:color .15s}
+.nb{flex:1;padding:8px 0 6px;background:none;border:none;cursor:pointer;color:var(--inkl);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;font-family:inherit;position:relative;transition:color .15s}
 .nb.on{color:var(--sage)}
 .nb svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .badge{position:absolute;top:5px;left:calc(50% + 5px);background:var(--sage);color:var(--wh);border-radius:99px;font-size:9px;font-weight:700;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;padding:0 3px}
@@ -223,6 +223,34 @@ hr{border:none;border-top:1px solid var(--bdr);margin:16px 0}
   <div id="cust-hint" class="hint">No customers yet. Add email when completing a sale.</div>
 </div>
 
+<!-- DATA BACKUP -->
+<div class="view" id="v-data">
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr">💾 Backup Your Data</div>
+    <div style="padding:14px">
+      <p style="font-size:13px;color:var(--inkl);margin-bottom:14px;line-height:1.6">Download a backup file containing all your products, stock levels, sales history and customers. Keep it somewhere safe — you can restore it anytime.</p>
+      <button class="btn btnp" style="width:100%;margin-bottom:10px" onclick="backupData()">⬇ Download Backup File</button>
+      <div style="font-size:11px;color:var(--inkl);text-align:center">Last backup: <span id="last-backup">Never</span></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr">📂 Restore from Backup</div>
+    <div style="padding:14px">
+      <p style="font-size:13px;color:var(--inkl);margin-bottom:14px;line-height:1.6">Select a backup file you previously downloaded to restore all your data. <strong style="color:var(--err)">This will replace your current data.</strong></p>
+      <label style="display:block;width:100%">
+        <div class="btn btns" style="width:100%;text-align:center;cursor:pointer;margin-bottom:10px">📁 Choose Backup File</div>
+        <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(this)"/>
+      </label>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">ℹ️ About Updates</div>
+    <div style="padding:14px">
+      <p style="font-size:13px;color:var(--inkl);line-height:1.6">When the app gets updated, your data is safe as long as you're using the same browser on the same device. For extra peace of mind, download a backup before any update — it takes 2 seconds and means your data can always be restored. 🌿</p>
+    </div>
+  </div>
+</div>
+
 <!-- NAV -->
 <nav>
   <button class="nb on" id="nb-pos" onclick="tab('pos')">
@@ -241,6 +269,10 @@ hr{border:none;border-top:1px solid var(--bdr);margin:16px 0}
   <button class="nb" id="nb-cust" onclick="tab('cust')">
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Customers
+  </button>
+  <button class="nb" id="nb-data" onclick="tab('data')">
+    <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+    Backup
   </button>
 </nav>
 
@@ -439,15 +471,15 @@ const fmt=n=>'R '+parseFloat(n).toFixed(2);
 const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML;};
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
-const TABS=['pos','inv','sum','cust'];
-const LBLS={pos:'Point of Sale',inv:'Inventory',sum:'Sales Summary',cust:'Customers'};
+const TABS=['pos','inv','sum','cust','data'];
+const LBLS={pos:'Point of Sale',inv:'Inventory',sum:'Sales Summary',cust:'Customers',data:'Data & Backup'};
 function tab(t){
   TABS.forEach(x=>{
     document.getElementById('v-'+x).classList.toggle('on',x===t);
     document.getElementById('nb-'+x).classList.toggle('on',x===t);
   });
   document.getElementById('hsub').textContent=LBLS[t];
-  if(t==='inv')rInv();if(t==='sum')rSum();if(t==='pos')rPOS();if(t==='cust')rCust();
+  if(t==='inv')rInv();if(t==='sum')rSum();if(t==='pos')rPOS();if(t==='cust')rCust();if(t==='data')rData();
 }
 
 // ── POS ───────────────────────────────────────────────────────────────────────
@@ -766,6 +798,49 @@ function cfm(msg,fn){
   omo('m-cfm');
 }
 document.querySelectorAll('.mo').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+// ── DATA BACKUP & RESTORE ────────────────────────────────────────────────────
+const BK='so_lastbackup';
+
+function rData(){
+  const last=gget(BK);
+  document.getElementById('last-backup').textContent=last||'Never';
+}
+
+function backupData(){
+  const backup={version:3,exportedAt:new Date().toLocaleString('en-ZA'),products:P,sales:S,customers:C};
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date().toISOString().slice(0,10);
+  a.href=url;a.download='StillOrganics_Backup_'+d+'.json';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  const now=new Date().toLocaleString('en-ZA');
+  gset(BK,now);
+  document.getElementById('last-backup').textContent=now;
+  setTimeout(()=>alert('Backup downloaded! Save it to iCloud, Google Drive or email it to yourself for safe keeping.'),300);
+}
+
+function restoreData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.products||!Array.isArray(data.products)){alert('Invalid backup file.');return;}
+      cfm('Restore backup from '+(data.exportedAt||'unknown date')+'? This will replace ALL current products, sales and customers.',()=>{
+        P=data.products||[];S=data.sales||[];C=data.customers||[];
+        svP();svS();svC();
+        gset(BK,'Restored on '+new Date().toLocaleString('en-ZA'));
+        rData();rPOS();
+        alert('Data restored successfully!');
+      });
+    }catch(err){alert('Could not read backup file. Make sure it is a valid Still Organics backup.');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 load();rPOS();rCart();
