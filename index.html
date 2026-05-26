@@ -79,6 +79,18 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .btns{background:var(--sage-m);color:var(--inkm);border:1px solid var(--bdr)}
 .btnd{background:#fbe8e8;color:var(--err);border:1px solid #f0d0d0}
 .hint{text-align:center;padding:28px 16px;color:var(--inkl);font-size:13px}
+/* PAYMENT METHOD BUTTONS */
+.pmb{flex:1;padding:10px 6px;border:2px solid var(--bdr);border-radius:10px;background:var(--cream);color:var(--inkm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
+.pmb:active{transform:scale(.96)}
+.pmb.sel{border-color:var(--sage);background:var(--sage-m);color:var(--ink)}
+/* CLOSE DAY */
+.day-card{background:var(--wh);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(44,51,37,.06);margin-bottom:14px}
+.day-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--sage-m)}
+.day-row:last-child{border-bottom:none}
+.day-lbl{font-size:12px;color:var(--inkl);font-weight:500}
+.day-val{font-family:Georgia,serif;font-size:16px;font-weight:600;color:var(--ink)}
+.day-val.cash{color:var(--warn)}
+.day-val.card{color:var(--sage)}
 /* INVENTORY */
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
 .sc{background:var(--wh);border:1px solid var(--bdr);border-radius:10px;padding:12px 8px 8px;text-align:center;box-shadow:0 2px 8px rgba(44,51,37,.05)}
@@ -199,16 +211,45 @@ hr{border:none;border-top:1px solid var(--bdr);margin:16px 0}
     <div class="ramt" id="rtot">R 0.00</div>
     <div class="rsub" id="rsub">0 sales</div>
   </div>
+  <!-- Cash/Card split -->
+  <div class="card" id="pay-split" style="display:none;margin-bottom:14px">
+    <div class="card-hdr">Payment Breakdown</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
+      <div style="padding:12px 8px;text-align:center;border-right:1px solid var(--sage-m)">
+        <div style="font-size:10px;color:var(--inkl);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">💵 Cash</div>
+        <div id="sum-cash" style="font-family:Georgia,serif;font-size:16px;font-weight:600;color:var(--warn)">R 0.00</div>
+      </div>
+      <div style="padding:12px 8px;text-align:center;border-right:1px solid var(--sage-m)">
+        <div style="font-size:10px;color:var(--inkl);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">💳 Card</div>
+        <div id="sum-card" style="font-family:Georgia,serif;font-size:16px;font-weight:600;color:var(--sage)">R 0.00</div>
+      </div>
+      <div style="padding:12px 8px;text-align:center">
+        <div style="font-size:10px;color:var(--inkl);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Txns</div>
+        <div id="sum-txns" style="font-family:Georgia,serif;font-size:16px;font-weight:600;color:var(--ink)">0</div>
+      </div>
+    </div>
+  </div>
+  <!-- Closed days -->
+  <div id="closed-days-section" style="display:none">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hdr">📅 Closed Days</div>
+      <div id="closed-days-list"></div>
+    </div>
+  </div>
   <div class="card" id="isold" style="display:none">
-    <div class="card-hdr">Items Sold</div>
+    <div class="card-hdr">Items Sold (Today)</div>
     <div id="isold-l"></div>
   </div>
   <div class="card" id="slog" style="display:none">
-    <div class="card-hdr">Sales Log</div>
+    <div class="card-hdr">Sales Log (Today)</div>
     <div id="slog-l"></div>
   </div>
   <div id="sum-hint" class="hint">No sales yet. Complete a sale in the Sell tab.</div>
-  <button class="btn btnd" id="clr-btn" style="display:none;width:100%;margin-top:4px" onclick="cfmClrSales()">Clear Sales History</button>
+  <div id="sum-actions" style="display:none;display:flex;flex-direction:column;gap:8px;margin-top:4px">
+    <button class="btn btnp" id="close-day-btn" style="display:none;width:100%" onclick="closeDay()">📅 Close Day & Reconcile</button>
+    <button class="btn btns" id="export-sales-btn" style="display:none;width:100%" onclick="exportSalesCSV()">⬇ Export Sales as CSV</button>
+    <button class="btn btnd" id="clr-btn" style="display:none;width:100%" onclick="cfmClrSales()">Clear Sales History</button>
+  </div>
 </div>
 <!-- CUSTOMERS -->
 <div class="view" id="v-cust">
@@ -284,7 +325,28 @@ hr{border:none;border-top:1px solid var(--bdr);margin:16px 0}
       <span>Total Due</span>
       <span id="sale-total-preview" style="color:var(--sage);font-family:Georgia,serif;font-size:20px">R 0.00</span>
     </div>
-    <hr/>
+    <hr style="margin-bottom:14px"/>
+    <div style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--inkl);margin-bottom:10px">Payment Method</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="pmb" id="pm-card" onclick="setPM('card')">💳 Card</button>
+      <button class="pmb" id="pm-cash" onclick="setPM('cash')">💵 Cash</button>
+      <button class="pmb" id="pm-split" onclick="setPM('split')">⇄ Split</button>
+    </div>
+    <!-- Cash tendered -->
+    <div id="pm-cash-section" style="display:none">
+      <div class="fg"><label class="fl">Cash Tendered (R)</label><input class="fi" type="number" id="cash-tendered" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcChange()"/></div>
+      <div id="change-display" style="display:none;background:var(--sage-m);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;font-weight:600;color:var(--inkl)">Change Due</span>
+        <span id="change-amt" style="font-family:Georgia,serif;font-size:20px;font-weight:600;color:var(--sage)">R 0.00</span>
+      </div>
+    </div>
+    <!-- Split payment -->
+    <div id="pm-split-section" style="display:none">
+      <div class="fg"><label class="fl">Cash Amount (R)</label><input class="fi" type="number" id="split-cash" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcSplit()"/></div>
+      <div class="fg"><label class="fl">Card Amount (R)</label><input class="fi" type="number" id="split-card" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcSplit()"/></div>
+      <div id="split-status" style="font-size:12px;color:var(--inkl);margin-bottom:10px;min-height:18px"></div>
+    </div>
+    <hr style="margin-bottom:14px"/>
     <div style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--inkl);margin-bottom:12px">Customer Details <span style="font-weight:400;color:var(--sage-p)">(optional)</span></div>
     <div class="fg"><label class="fl">Customer Name</label><input class="fi" type="text" id="cust-name" placeholder="e.g. Sarah Johnson"/></div>
     <div class="fg"><label class="fl">Email Address</label><input class="fi" type="email" id="cust-email" placeholder="sarah@email.com" inputmode="email"/></div>
@@ -300,10 +362,26 @@ hr{border:none;border-top:1px solid var(--bdr);margin:16px 0}
     <div class="mhdr"><div class="mt">Sale Complete</div><button class="mc" onclick="cmo('m-ok')">✕</button></div>
     <div class="si">🌿</div>
     <div class="sa" id="ok-amt">R 0.00</div>
-    <div class="sl" id="ok-sub">Card payment due</div>
+    <div class="sl" id="ok-sub">Thank you!</div>
+    <div id="ok-payment-info" style="background:var(--sage-m);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;display:none"></div>
+    <div id="ok-change-info" style="background:#e8f5e9;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:none;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;font-weight:600;color:var(--inkl)">Change to Give</span>
+      <span id="ok-change-amt" style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:var(--sage)">R 0.00</span>
+    </div>
     <div id="ok-rcpt"></div>
     <div class="rtot"><span>Total</span><span id="ok-tot2" style="color:var(--sage)">R 0.00</span></div>
     <button class="btn btnp" style="width:100%;margin-top:16px" onclick="cmo('m-ok')">Done</button>
+  </div>
+</div>
+<!-- MODAL: Close Day Recon -->
+<div class="mo" id="m-closeday">
+  <div class="md">
+    <div class="mhdr"><div class="mt">End of Day Reconciliation</div><button class="mc" onclick="cmo('m-closeday')">✕</button></div>
+    <div id="closeday-body"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+      <button class="btn btnp" id="closeday-confirm" onclick="confirmCloseDay()">✓ Lock This Day</button>
+      <button class="btn btns" onclick="cmo('m-closeday')">Cancel</button>
+    </div>
   </div>
 </div>
 <!-- MODAL: Add/Edit Product -->
@@ -458,14 +536,14 @@ const CAT_EMOJIS = {
   'Accessories':'🎁',"Natural Kiddos Range":'🌈'
 };
 // ── STORAGE ───────────────────────────────────────────────────────────────────
-const PK='so_p_v3',SK='so_s_v3',CK='so_c_v3';
-let P=[],S=[],C=[],cart=[];
+const PK='so_p_v3',SK='so_s_v3',CK='so_c_v3',DK='so_days_v3';
+let P=[],S=[],C=[],DAYS=[],cart=[];
 let _mem={};
 function gset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){_mem[k]=JSON.stringify(v)}}
 function gget(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return _mem[k]?JSON.parse(_mem[k]):null}}
 function load(){
   P=gget(PK)||JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
-  S=gget(SK)||[];C=gget(CK)||[];
+  S=gget(SK)||[];C=gget(CK)||[];loadDays();
 }
 function svP(){gset(PK,P)}function svS(){gset(SK,S)}function svC(){gset(CK,C)}
 const fmt=n=>'R '+parseFloat(n).toFixed(2);
@@ -603,6 +681,39 @@ function rCart(id,dir){
 }
 function clrCart(){cart=[];cartBarOpen=false;rCart();rPOS();}
 // ── SALE MODAL ────────────────────────────────────────────────────────────────
+let curPM='card';
+function setPM(m){
+  curPM=m;
+  ['card','cash','split'].forEach(x=>{
+    document.getElementById('pm-'+x).classList.toggle('sel',x===m);
+  });
+  document.getElementById('pm-cash-section').style.display=m==='cash'?'block':'none';
+  document.getElementById('pm-split-section').style.display=m==='split'?'block':'none';
+  if(m==='cash'){document.getElementById('cash-tendered').value='';document.getElementById('change-display').style.display='none';}
+  if(m==='split'){document.getElementById('split-cash').value='';document.getElementById('split-card').value='';document.getElementById('split-status').textContent='';}
+}
+function calcChange(){
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const tendered=parseFloat(document.getElementById('cash-tendered').value)||0;
+  const change=tendered-total;
+  const cd=document.getElementById('change-display');
+  if(tendered>0){
+    cd.style.display='flex';
+    document.getElementById('change-amt').textContent=change>=0?fmt(change):'⚠ Short by '+fmt(Math.abs(change));
+    document.getElementById('change-amt').style.color=change>=0?'var(--sage)':'var(--err)';
+  } else {cd.style.display='none';}
+}
+function calcSplit(){
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const cash=parseFloat(document.getElementById('split-cash').value)||0;
+  const card=parseFloat(document.getElementById('split-card').value)||0;
+  const diff=total-(cash+card);
+  const el=document.getElementById('split-status');
+  if(cash+card===0){el.textContent='';return;}
+  if(Math.abs(diff)<0.01){el.textContent='✓ Amounts match';el.style.color='var(--sage)';}
+  else if(diff>0){el.textContent='⚠ Short by '+fmt(diff);el.style.color='var(--err)';}
+  else{el.textContent='⚠ Over by '+fmt(Math.abs(diff));el.style.color='var(--warn)';}
+}
 function openSaleModal(){
   if(!cart.length)return;
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
@@ -612,13 +723,26 @@ function openSaleModal(){
   ).join('');
   document.getElementById('cust-name').value='';
   document.getElementById('cust-email').value='';
+  setPM('card');
   omo('m-sale');
 }
 function finaliseSale(){
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
   const cn=document.getElementById('cust-name').value.trim();
   const ce=document.getElementById('cust-email').value.trim();
-  const sale={id:Date.now(),date:new Date().toLocaleString('en-ZA'),items:cart.map(i=>({...i})),total,custName:cn,custEmail:ce};
+  // Payment info
+  let payMethod=curPM,cashAmt=0,cardAmt=0,changeAmt=0;
+  if(curPM==='cash'){
+    cashAmt=total;
+    const tendered=parseFloat(document.getElementById('cash-tendered').value)||0;
+    changeAmt=Math.max(0,tendered-total);
+  } else if(curPM==='card'){
+    cardAmt=total;
+  } else if(curPM==='split'){
+    cashAmt=parseFloat(document.getElementById('split-cash').value)||0;
+    cardAmt=parseFloat(document.getElementById('split-card').value)||0;
+  }
+  const sale={id:Date.now(),date:new Date().toLocaleString('en-ZA'),items:cart.map(i=>({...i})),total,custName:cn,custEmail:ce,payMethod,cashAmt,cardAmt,changeAmt};
   S.unshift(sale);
   P=P.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:Math.max(0,p.stock-ci.qty)}:p;});
   svP();svS();
@@ -629,10 +753,19 @@ function finaliseSale(){
     svC();
   }
   cmo('m-sale');
+  // Success modal
   document.getElementById('ok-amt').textContent=fmt(total);
   document.getElementById('ok-tot2').textContent=fmt(total);
-  document.getElementById('ok-sub').textContent=cn?'Thank you, '+cn+'!':'Card payment due';
+  document.getElementById('ok-sub').textContent=cn?'Thank you, '+cn+'!':'Sale recorded';
   document.getElementById('ok-rcpt').innerHTML=sale.items.map(i=>'<div class="rrow"><span>'+esc(i.name)+' ×'+i.qty+'</span><span style="color:var(--sage)">'+fmt(i.price*i.qty)+'</span></div>').join('');
+  // Payment info display
+  const pi=document.getElementById('ok-payment-info');
+  const ci=document.getElementById('ok-change-info');
+  if(curPM==='card'){pi.innerHTML='💳 <strong>Card</strong> — '+fmt(total);pi.style.display='block';}
+  else if(curPM==='cash'){pi.innerHTML='💵 <strong>Cash</strong> — '+fmt(total);pi.style.display='block';}
+  else{pi.innerHTML='⇄ <strong>Split</strong> — 💵 Cash '+fmt(cashAmt)+' · 💳 Card '+fmt(cardAmt);pi.style.display='block';}
+  if(changeAmt>0){document.getElementById('ok-change-amt').textContent=fmt(changeAmt);ci.style.display='flex';}
+  else{ci.style.display='none';}
   omo('m-ok');
   cart=[];rCart();rPOS();
 }
@@ -781,10 +914,21 @@ function exportSTemail(){
   window.location.href='mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
 }
 // ── SUMMARY ───────────────────────────────────────────────────────────────────
+function svDays(){localStorage.setItem(DK,JSON.stringify(DAYS));}
+function loadDays(){try{DAYS=JSON.parse(localStorage.getItem(DK))||[];}catch(e){DAYS=[];}}
 function rSum(){
   const tot=S.reduce((s,r)=>s+r.total,0);
   document.getElementById('rtot').textContent=fmt(tot);
-  document.getElementById('rsub').textContent=S.length+' sale'+(S.length!==1?'s':'')+' completed';
+  document.getElementById('rsub').textContent=S.length+' sale'+(S.length!==1?'s':'')+' today';
+  // Cash/card split
+  const totalCash=S.reduce((s,r)=>s+(r.cashAmt||0),0);
+  const totalCard=S.reduce((s,r)=>s+(r.cardAmt||0),0);
+  const hasSales=S.length>0;
+  document.getElementById('pay-split').style.display=hasSales?'':'none';
+  document.getElementById('sum-cash').textContent=fmt(totalCash);
+  document.getElementById('sum-card').textContent=fmt(totalCard);
+  document.getElementById('sum-txns').textContent=S.length;
+  // Items sold
   const map={};
   S.forEach(r=>r.items.forEach(i=>{
     if(!map[i.id])map[i.id]={name:i.name,qty:0,rev:0};
@@ -797,13 +941,95 @@ function rSum(){
     return `<div class="sr"><div class="sri"><div class="srn">${esc(info.name)}</div>${pr?`<div class="srr">${pr.stock} remaining</div>`:''}</div><div class="srv"><div class="srq">×${info.qty}</div><div class="srm">${fmt(info.rev)}</div></div></div>`;
   }).join('');
   document.getElementById('slog').style.display=S.length?'':'none';
-  document.getElementById('slog-l').innerHTML=S.map(s=>`
-    <div class="li"><div class="lh"><div class="ld">${s.date}${s.custName?' · '+esc(s.custName):''}</div><div class="lt">${fmt(s.total)}</div></div>
-    <div class="ll">${s.items.map(i=>esc(i.name)+' ×'+i.qty).join(' · ')}</div></div>`).join('');
+  document.getElementById('slog-l').innerHTML=S.map(s=>{
+    const pmIcon=s.payMethod==='cash'?'💵':s.payMethod==='split'?'⇄':'💳';
+    return `<div class="li"><div class="lh"><div class="ld">${s.date}${s.custName?' · '+esc(s.custName):''}</div><div class="lt">${pmIcon} ${fmt(s.total)}</div></div>
+    <div class="ll">${s.items.map(i=>esc(i.name)+' ×'+i.qty).join(' · ')}</div></div>`;
+  }).join('');
   document.getElementById('sum-hint').style.display=S.length?'none':'';
-  document.getElementById('clr-btn').style.display=S.length?'':'none';
+  document.getElementById('close-day-btn').style.display=hasSales?'':'none';
+  document.getElementById('export-sales-btn').style.display=(hasSales||DAYS.length)?'':'none';
+  document.getElementById('clr-btn').style.display=(hasSales||DAYS.length)?'':'none';
+  // Closed days
+  loadDays();
+  document.getElementById('closed-days-section').style.display=DAYS.length?'':'none';
+  document.getElementById('closed-days-list').innerHTML=DAYS.map((d,i)=>`
+    <div class="day-card" style="border:none;box-shadow:none;margin-bottom:0">
+      <div style="padding:10px 14px;background:var(--sage-m);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--inkl);border-bottom:1px solid var(--bdr)">${esc(d.date)} · ${d.txns} sale${d.txns!==1?'s':''}</div>
+      <div class="day-row"><span class="day-lbl">Total Revenue</span><span class="day-val">${fmt(d.total)}</span></div>
+      <div class="day-row"><span class="day-lbl">💵 Cash</span><span class="day-val cash">${fmt(d.cash)}</span></div>
+      <div class="day-row"><span class="day-lbl">💳 Card</span><span class="day-val card">${fmt(d.card)}</span></div>
+    </div>`).join('');
 }
-function cfmClrSales(){cfm('Clear all sales history? This cannot be undone.',()=>{S=[];svS();rSum();});}
+function cfmClrSales(){cfm('Clear all sales history and closed days? This cannot be undone.',()=>{S=[];DAYS=[];svS();svDays();rSum();});}
+// ── EXPORT SALES CSV ─────────────────────────────────────────────────────────
+function exportSalesCSV(){
+  const allSales=[...S];
+  // Include locked day sales if we stored them separately — for now export open sales + show closed day summaries
+  if(!allSales.length&&!DAYS.length){alert('No sales to export yet.');return;}
+  const rows=['Date,Customer,Payment Method,Cash Amount,Card Amount,Total,Items'];
+  allSales.forEach(s=>{
+    const items=s.items.map(i=>i.name+' ×'+i.qty).join('; ');
+    rows.push([
+      `"${s.date}"`,
+      `"${s.custName||''}"`,
+      `"${s.payMethod||'card'}"`,
+      (s.cashAmt||0).toFixed(2),
+      (s.cardAmt||0).toFixed(2),
+      s.total.toFixed(2),
+      `"${items}"`
+    ].join(','));
+  });
+  if(DAYS.length){
+    rows.push('');
+    rows.push('"CLOSED DAY SUMMARIES","","","","","",""');
+    rows.push('"Date","Transactions","","Cash","Card","Total",""');
+    DAYS.forEach(d=>{
+      rows.push([`"${d.date}"`,d.txns,'',d.cash.toFixed(2),d.card.toFixed(2),d.total.toFixed(2),''].join(','));
+    });
+  }
+  const blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const dt=new Date().toISOString().slice(0,10);
+  a.href=url;a.download='StillOrganics_Sales_'+dt+'.csv';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+// ── CLOSE DAY ────────────────────────────────────────────────────────────────
+function closeDay(){
+  if(!S.length){alert('No sales recorded today.');return;}
+  const total=S.reduce((s,r)=>s+r.total,0);
+  const cash=S.reduce((s,r)=>s+(r.cashAmt||0),0);
+  const card=S.reduce((s,r)=>s+(r.cardAmt||0),0);
+  const today=new Date().toLocaleDateString('en-ZA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('closeday-body').innerHTML=`
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:11px;color:var(--inkl);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Closing</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink)">${today}</div>
+    </div>
+    <div class="day-card">
+      <div class="day-row"><span class="day-lbl">Total Sales</span><span class="day-val">${S.length} transaction${S.length!==1?'s':''}</span></div>
+      <div class="day-row"><span class="day-lbl">Total Revenue</span><span class="day-val" style="font-size:20px">${fmt(total)}</span></div>
+      <div class="day-row"><span class="day-lbl">💵 Cash to Count</span><span class="day-val cash" style="font-size:20px">${fmt(cash)}</span></div>
+      <div class="day-row"><span class="day-lbl">💳 Card Receipts</span><span class="day-val card">${fmt(card)}</span></div>
+    </div>
+    <p style="font-size:12px;color:var(--inkl);margin-top:12px;line-height:1.6">Locking this day will archive today's sales. Make sure your cash matches <strong style="color:var(--warn)">${fmt(cash)}</strong> before confirming.</p>`;
+  omo('m-closeday');
+}
+function confirmCloseDay(){
+  loadDays();
+  const total=S.reduce((s,r)=>s+r.total,0);
+  const cash=S.reduce((s,r)=>s+(r.cashAmt||0),0);
+  const card=S.reduce((s,r)=>s+(r.cardAmt||0),0);
+  const today=new Date().toLocaleDateString('en-ZA',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  DAYS.unshift({date:today,total,cash,card,txns:S.length,lockedAt:new Date().toLocaleString('en-ZA')});
+  svDays();
+  S=[];svS();
+  cmo('m-closeday');
+  rSum();
+  setTimeout(()=>alert('✓ Day closed!\n\nCash to bank: '+fmt(cash)+'\nCard: '+fmt(card)+'\n\nToday\'s sales have been archived.'),300);
+}
 // ── CUSTOMERS ─────────────────────────────────────────────────────────────────
 function rCust(){
   document.getElementById('cs0').textContent=C.length;
@@ -871,7 +1097,7 @@ function rData(){
   document.getElementById('last-backup').textContent=last||'Never';
 }
 function backupData(){
-  const backup={version:3,exportedAt:new Date().toLocaleString('en-ZA'),products:P,sales:S,customers:C};
+  const backup={version:3,exportedAt:new Date().toLocaleString('en-ZA'),products:P,sales:S,customers:C,days:DAYS};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -892,8 +1118,8 @@ function restoreData(input){
       const data=JSON.parse(e.target.result);
       if(!data.products||!Array.isArray(data.products)){alert('Invalid backup file.');return;}
       cfm('Restore backup from '+(data.exportedAt||'unknown date')+'? This will replace ALL current products, sales and customers.',()=>{
-        P=data.products||[];S=data.sales||[];C=data.customers||[];
-        svP();svS();svC();
+        P=data.products||[];S=data.sales||[];C=data.customers||[];DAYS=data.days||[];
+        svP();svS();svC();svDays();
         gset(BK,'Restored on '+new Date().toLocaleString('en-ZA'));
         rData();rPOS();
         alert('Data restored successfully!');
